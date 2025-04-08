@@ -2,11 +2,23 @@
 
 set -euo pipefail
 
+# Determine if running from a local repo or via curl
+IS_LOCAL_CLONE=true
+if [[ "${BASH_SOURCE[0]}" =~ ^/dev/fd/.* || "${BASH_SOURCE[0]}" == "bash" ]]; then
+  IS_LOCAL_CLONE=false
+fi
+
 BIN_DIR="$HOME/.local/bin"
 PRJCTS_DIR="$HOME/.local/share/prjcts"
 DEV_CLI="$BIN_DIR/dev-cli"
 
 mkdir -p "$BIN_DIR" "$PRJCTS_DIR"
+
+if $IS_LOCAL_CLONE; then
+  cp ./version "$PRJCTS_DIR/version"
+else
+  curl -fsSL https://raw.githubusercontent.com/prjcts/cli/main/version -o "$PRJCTS_DIR/version"
+fi
 
 echo "Installing dev-cli to $DEV_CLI"
 cp ./dev-cli "$DEV_CLI"
