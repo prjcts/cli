@@ -58,9 +58,9 @@ sed -i.bak "s/{{VERSION}}/$TAG/g" "$INSTALL_SCRIPT"
 rm -f "$INSTALL_SCRIPT.bak"
 
 if [[ -f "$README" ]]; then
-  sed -i.bak "s/{{VERSION}}/$TAG/g" "$README"
+  sed -i.bak -E "s|(https://raw.githubusercontent.com/prjcts/cli/)(v[0-9]+\.[0-9]+\.[0-9]+|\{\{VERSION\}\})|\1$TAG|g" "$README"
   rm -f "$README.bak"
-  echo "✅ Updated {{VERSION}} in README.md"
+  echo "✅ Updated install command in README.md to use $TAG"
 fi
 
 # Create or prepend changelog entry
