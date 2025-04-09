@@ -17,6 +17,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 VERSION_FILE="$ROOT_DIR/version"
 INSTALL_SCRIPT="$ROOT_DIR/install.sh"
 CHANGELOG="$ROOT_DIR/CHANGELOG.md"
+README="$ROOT_DIR/README.md"
 
 cd "$ROOT_DIR"
 
@@ -32,6 +33,12 @@ echo "$VERSION" > "$VERSION_FILE"
 # Replace {{VERSION}} in install.sh
 sed -i.bak "s/{{VERSION}}/$TAG/g" "$INSTALL_SCRIPT"
 rm -f "$INSTALL_SCRIPT.bak"
+
+if [[ -f "$README" ]]; then
+  sed -i.bak "s/{{VERSION}}/$TAG/g" "$README"
+  rm -f "$README.bak"
+  echo "✅ Updated {{VERSION}} in README.md"
+fi
 
 # Get last tag if exists
 LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
@@ -50,10 +57,10 @@ touch "$CHANGELOG"
   cat "$CHANGELOG"
 } > "$CHANGELOG.tmp" && mv "$CHANGELOG.tmp" "$CHANGELOG"
 
-echo "✅ Updated version file, install script, and changelog."
+echo "✅ Updated version file, install script, readme and changelog."
 
 # Commit and tag
-git add version install.sh CHANGELOG.md
+git add version install.sh README.md CHANGELOG.md
 git commit -m "Release $TAG"
 git tag "$TAG"
 
