@@ -7,8 +7,8 @@ CONFIG_DIR="$HOME/.local/share/prjcts"
 DEV_BIN="$BIN_DIR/dev-cli"
 VERSION_FILE="$CONFIG_DIR/version"
 GITHUB_REPO="prjcts/cli"
-REPO_URL="https://github.com/$GITHUB_REPO"
-API_URL="https://api.github.com/repos/$GITHUB_REPO/releases/latest"
+VERSION="{{VERSION}}"
+BASE_URL="https://raw.githubusercontent.com/$GITHUB_REPO/$VERSION"
 
 mkdir -p "$BIN_DIR" "$CONFIG_DIR"
 
@@ -16,17 +16,11 @@ echo "📦 Installing dev CLI..."
 
 # Detect local clone vs GitHub install
 if [[ -f "./dev-cli" && -f "./version" ]]; then
-  echo "🛠 Installing from local clone"
+  echo "🛠 Installing from local clone..."
   cp ./dev-cli "$DEV_BIN"
   cp ./version "$VERSION_FILE"
 else
-  echo "🌐 Installing from latest GitHub release..."
-  TAG=$(curl -fsSL "$API_URL" | grep '"tag_name":' | cut -d '"' -f4)
-  if [[ -z "$TAG" ]]; then
-    echo "❌ Failed to fetch latest release tag"
-    exit 1
-  fi
-  BASE_URL="https://raw.githubusercontent.com/$GITHUB_REPO/$TAG"
+  echo "🌐 Installing from GitHub release..."
   curl -fsSL "$BASE_URL/dev-cli" -o "$DEV_BIN"
   curl -fsSL "$BASE_URL/version" -o "$VERSION_FILE"
 fi
