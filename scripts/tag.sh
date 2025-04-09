@@ -54,7 +54,7 @@ fi
 echo "$NEW_VERSION" > "$VERSION_FILE"
 
 # Replace {{VERSION}} in install.sh and README.md
-sed -i.bak "s/{{VERSION}}/$TAG/g" "$INSTALL_SCRIPT"
+sed -i.bak -E "s/^VERSION=\"(v[0-9]+\.[0-9]+\.[0-9]+|\{\{VERSION\}\})\"/VERSION=\"$TAG\"/" "$INSTALL_SCRIPT"
 rm -f "$INSTALL_SCRIPT.bak"
 
 if [[ -f "$README" ]]; then
