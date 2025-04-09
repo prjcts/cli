@@ -1,3 +1,9 @@
+## v0.1.5 - 2025-04-08
+
+- better sed
+- make readme update smarter
+
+
 ## v0.1.4 - 2025-04-08
 
 - better versioning when tagging
