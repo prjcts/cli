@@ -14,22 +14,24 @@ cmd_help() {
 Usage: dev [command] [options]
 
 Commands:
-  dev                            Launch project picker and open with configured command
-  dev add                        Add a project directory (default)
-  dev add -t, --triggers         Add a project trigger (e.g. .git)
-  dev add -d, --directories      Add a project directory
-  dev clean                      Remove a project directory (default)
-  dev clean -t, --triggers       Remove a trigger
-  dev clean -d, --directories    Remove a project directory
-  dev set -c, --command          Set the launch command (e.g. nvim, code)
-  dev show command               Show the current launch command
-  dev uninstall [--no-source]   Remove dev CLI, config, and shell function
-  dev triggers                   Open the trigger list for manual editing
-  dev directories                Open the project directory list for manual editing
-  dev --version                  Show the current version
-  dev help                       Show this help message
 
-Current launch command: $(<"$COMMAND_FILE" 2>/dev/null || echo "(not set)")
+  dev                             Launch project picker and open with configured command
+
+  dev help                        Show this help message
+  dev version, -v, --version      Show the current version
+
+  dev add                         Add a project directory (default)
+  dev add -t, --triggers          Add a project trigger (e.g. .git)
+  dev add -d, --directories       Add a project directory
+  dev clean                       Remove a project directory (default)
+  dev clean -t, --triggers        Remove a trigger
+  dev clean -d, --directories     Remove a project directory
+  dev set -c, --command           Set the launch command (e.g. nvim, code)
+  dev show command                Show the current launch command
+  dev triggers                    Open the trigger list for manual editing
+  dev directories                 Open the project directory list for manual editing
+
+  dev uninstall [--no-source]     Remove dev CLI, config, and shell function
 EOF
 }
 
