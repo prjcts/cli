@@ -7,7 +7,7 @@ CONFIG_DIR="$HOME/.local/share/prjcts"
 DEV_BIN="$BIN_DIR/dev-cli"
 VERSION_FILE="$CONFIG_DIR/version"
 GITHUB_REPO="prjcts/cli"
-VERSION="v0.1.6"
+VERSION="v0.1.7"
 BASE_URL="https://raw.githubusercontent.com/$GITHUB_REPO/$VERSION"
 
 mkdir -p "$BIN_DIR" "$CONFIG_DIR"

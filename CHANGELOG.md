@@ -1,3 +1,8 @@
+## v0.1.7 - 2025-04-08
+
+- clean help docs
+
+
 ## v0.1.6 - 2025-04-08
 
 - smarter install.sh replace

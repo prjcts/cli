@@ -14,7 +14,7 @@ The `dev` command is a fast, fuzzy finder for jumping into your projects with yo
 ## 🛠️ Installation
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/prjcts/cli/v0.1.6/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/prjcts/cli/v0.1.7/install.sh | bash
 ```
 
 Supports Zsh, Bash, Fish, and POSIX shells.
