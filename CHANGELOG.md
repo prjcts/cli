@@ -1,3 +1,8 @@
+## v0.1.6 - 2025-04-08
+
+- smarter install.sh replace
+
+
 ## v0.1.5 - 2025-04-08
 
 - better sed
