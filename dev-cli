@@ -4,13 +4,10 @@ set -euo pipefail
 
 CONFIG_DIR="$HOME/.local/share/prjcts"
 VERSION_FILE="$CONFIG_DIR/version"
-VERSION=$(<"$VERSION_FILE" 2>/dev/null || echo "0.1.0")
+VERSION=$(cat "$VERSION_FILE" 2>/dev/null || echo "0.1.0")
 DIRS_FILE="$CONFIG_DIR/dirs"
 TRIGGERS_FILE="$CONFIG_DIR/triggers"
 COMMAND_FILE="$CONFIG_DIR/command"
-BIN_PATH="$HOME/.local/bin/dev-cli"
-
-mkdir -p "$CONFIG_DIR"
 
 cmd_help() {
   cat <<EOF
@@ -26,8 +23,9 @@ Commands:
   dev clean -d, --directories    Remove a project directory
   dev set -c, --command          Set the launch command (e.g. nvim, code)
   dev show command               Show the current launch command
-  dev uninstall                  Remove dev CLI, config, and shell function
+  dev uninstall [--no-source]   Remove dev CLI, config, and shell function
   dev triggers                   Open the trigger list for manual editing
+  dev directories                Open the project directory list for manual editing
   dev --version                  Show the current version
   dev help                       Show this help message
 
@@ -35,154 +33,24 @@ Current launch command: $(<"$COMMAND_FILE" 2>/dev/null || echo "(not set)")
 EOF
 }
 
-cmd_set() {
-  case "${1:-}" in
-    -c|--command)
-      read -r -e -p "Enter the launch command (e.g. nvim, code, emacs): " editor_cmd
-      if [[ -z "$editor_cmd" ]]; then
-        echo "Canceled."
-        return
-      fi
-      echo "$editor_cmd" > "$COMMAND_FILE"
-      echo "Set launch command to: $editor_cmd"
-      ;;
-    *)
-      echo "Invalid option for 'set'"
-      exit 1
-      ;;
-  esac
-}
-
-cmd_show() {
-  case "${1:-}" in
-    command)
-      if [[ -s "$COMMAND_FILE" ]]; then
-        echo "Current launch command: $(<"$COMMAND_FILE")"
-      else
-        echo "No launch command set."
-      fi
-      ;;
-    *)
-      echo "Unknown 'show' option. Try: dev show command"
-      ;;
-  esac
-}
-
-cmd_uninstall() {
-  echo "Uninstalling dev CLI..."
-
-  echo "Removing CLI script at $BIN_PATH"
-  rm -f "$BIN_PATH"
-
-  echo "Removing config directory $CONFIG_DIR"
-  rm -rf "$CONFIG_DIR"
-
-  echo "Cleaning up shell rc files..."
-  for rc_file in "$HOME/.zshrc" "$HOME/.bashrc" "$HOME/.profile"; do
-    if [[ -f "$rc_file" ]]; then
-      sed -i.bak '/function dev()/,/^}/d' "$rc_file"
-      sed -i.bak '/dev-completion\.zsh/d' "$rc_file"
-      sed -i.bak '/fpath+=(.*prjcts.*)/d' "$rc_file"
-      sed -i.bak '/autoload -Uz compinit && compinit/d' "$rc_file"
-      echo "Updated $rc_file (backup saved as $rc_file.bak)"
-    fi
-  done
-
-  echo "If you're using Fish, you may want to remove ~/.config/fish/functions/dev.fish and ~/.config/fish/completions/dev.fish manually."
-  echo "Uninstall complete."
-}
-
-cmd_add() {
-  local mode="directories"
-  case "${1:-}" in
-    -t|--triggers) mode="triggers" ;;
-    -d|--directories|'') ;;
-    *) echo "Invalid option for 'add'"; exit 1 ;;
-  esac
-
-  if [[ "$mode" == "directories" ]]; then
-    read -r -e -p "Enter a directory to add: " input_dir
-    if [[ -z "$input_dir" ]]; then
-      echo "Canceled."
-      return
-    fi
-    proj_dir=$(eval echo "$input_dir")
-    if [[ ! -d "$proj_dir" ]]; then
-      echo "Directory does not exist: $proj_dir"
-      return
-    fi
-    if grep -Fxq "$proj_dir" "$DIRS_FILE" 2>/dev/null; then
-      echo "Already in project list."
-    else
-      echo "$proj_dir" >> "$DIRS_FILE"
-      echo "Added."
-    fi
-  else
-    read -r -e -p "Enter a trigger file to add (e.g., .git): " trigger
-    if [[ -z "$trigger" ]]; then
-      echo "Canceled."
-      return
-    fi
-    if grep -Fxq "$trigger" "$TRIGGERS_FILE" 2>/dev/null; then
-      echo "Already in trigger list."
-    else
-      echo "$trigger" >> "$TRIGGERS_FILE"
-      echo "Added."
-    fi
-  fi
-}
-
-cmd_clean() {
-  local mode="directories"
-  case "${1:-}" in
-    -t|--triggers) mode="triggers" ;;
-    -d|--directories|'') ;;
-    *) echo "Invalid option for 'clean'"; exit 1 ;;
-  esac
-
-  local target_file
-  [[ "$mode" == "directories" ]] && target_file="$DIRS_FILE" || target_file="$TRIGGERS_FILE"
-
-  local -a map=()
-  if [[ -f "$target_file" ]]; then
-    while IFS= read -r line || [[ -n "$line" ]]; do
-      map+=("$line")
-    done < "$target_file"
-  fi
-
-  if (( ${#map[@]:-0} == 0 )); then
-    echo "No entries to clean."
-    return
-  fi
-
-  echo "Saved $mode:"
-  for i in "${!map[@]}"; do
-    echo "$((i+1)). ${map[$i]}"
-  done
-
-  echo ""
-  read -rp "Enter number to remove (or leave blank to cancel): " choice
-  if [[ -n "$choice" && "$choice" =~ ^[0-9]+$ && "$choice" -ge 1 && "$choice" -le ${#map[@]} ]]; then
-    unset 'map[choice-1]'
-    if (( ${#map[@]:-0} > 0 )); then
-      printf "%s\n" "${map[@]}" > "$target_file"
-    else
-      > "$target_file"
-    fi
-    echo "Removed."
-  else
-    echo "Canceled."
-  fi
-}
-
-cmd_triggers() {
-  ${EDITOR:-nvim} "$TRIGGERS_FILE"
-}
-
 cmd_main() {
-  [[ ! -s "$DIRS_FILE" ]] && { echo "No project directories found."; cmd_add --directories; echo "Now try running 'dev' again."; exit 0; }
-  [[ ! -s "$COMMAND_FILE" ]] && { echo "No launch command set."; cmd_set --command; echo "Now try running 'dev' again."; exit 0; }
-  [[ ! -s "$TRIGGERS_FILE" ]] && { echo -e ".git\npackage.json" > "$TRIGGERS_FILE"; }
+  if [[ ! -s "$DIRS_FILE" ]]; then
+    echo "❌ No project directories configured." >&2
+    echo "💡 Run: dev add" >&2
+    exit 1
+  fi
+
+  if [[ ! -s "$COMMAND_FILE" ]]; then
+    echo "❌ No launch command set." >&2
+    echo "💡 Run: dev set -c" >&2
+    exit 1
+  fi
+
+  if [[ ! -s "$TRIGGERS_FILE" ]]; then
+    echo "❌ No project triggers configured." >&2
+    echo "💡 Run: dev add -t" >&2
+    exit 1
+  fi
 
   local -a triggers=()
   while IFS= read -r line || [[ -n "$line" ]]; do
@@ -192,11 +60,9 @@ cmd_main() {
   find_projects() {
     while IFS= read -r root; do
       [[ -d "$root" ]] || continue
-
       for trigger in "${triggers[@]}"; do
         [[ -e "$root/$trigger" ]] && echo "$root" && break
       done
-
       find "$root" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | while read -r dir; do
         for trigger in "${triggers[@]}"; do
           [[ -e "$dir/$trigger" ]] && echo "$dir" && break
@@ -205,20 +71,122 @@ cmd_main() {
     done < "$DIRS_FILE"
   }
 
-  local editor_cmd selected
-  editor_cmd=$(<"$COMMAND_FILE")
-  selected=$(find_projects | sort -u | fzf --prompt="Select project: ")
-  [[ -n "$selected" ]] && exec "$editor_cmd" "$selected"
+  find_projects | sort -u | fzf --prompt="Select project: "
+}
+
+cmd_add() {
+  local mode="directories"
+  case "${1:-}" in
+    -t|--triggers) mode="triggers" ;;
+    -d|--directories|'') ;;
+    *) echo "Invalid option for 'add'" >&2; exit 1 ;;
+  esac
+
+  if [[ "$mode" == "directories" ]]; then
+    read -r -e -p "Enter a directory to add: " input_dir
+    [[ -z "$input_dir" ]] && { echo "Canceled." >&2; return; }
+    proj_dir=$(eval echo "$input_dir")
+    proj_dir="${proj_dir%/}"
+    [[ ! -d "$proj_dir" ]] && { echo "Directory does not exist: $proj_dir" >&2; return; }
+    grep -Fxq "$proj_dir" "$DIRS_FILE" 2>/dev/null || echo "$proj_dir" >> "$DIRS_FILE"
+    echo "Added." >&2
+  else
+    read -r -e -p "Enter a trigger file to add (e.g., .git): " trigger
+    [[ -z "$trigger" ]] && { echo "Canceled." >&2; return; }
+    grep -Fxq "$trigger" "$TRIGGERS_FILE" 2>/dev/null || echo "$trigger" >> "$TRIGGERS_FILE"
+    echo "Added." >&2
+  fi
+}
+
+cmd_clean() {
+  local mode="directories"
+  case "${1:-}" in
+    -t|--triggers) mode="triggers" ;;
+    -d|--directories|'') ;;
+    *) echo "Invalid option for 'clean'" >&2; exit 1 ;;
+  esac
+
+  local target_file
+  [[ "$mode" == "directories" ]] && target_file="$DIRS_FILE" || target_file="$TRIGGERS_FILE"
+
+  local -a map=()
+  [[ -f "$target_file" ]] && while IFS= read -r line || [[ -n "$line" ]]; do map+=("$line"); done < "$target_file"
+  (( ${#map[@]:-0} == 0 )) && { echo "No entries to clean." >&2; return; }
+
+  echo "Saved $mode:" >&2
+  for i in "${!map[@]}"; do echo "$((i+1)). ${map[$i]}" >&2; done
+
+  echo "" >&2
+  read -rp "Enter number to remove (or leave blank to cancel): " choice
+  if [[ "$choice" =~ ^[0-9]+$ && "$choice" -ge 1 && "$choice" -le ${#map[@]} ]]; then
+    unset 'map[choice-1]'
+    printf "%s\n" "${map[@]}" > "$target_file"
+    echo "Removed." >&2
+  else
+    echo "Canceled." >&2
+  fi
+}
+
+cmd_set() {
+  case "${1:-}" in
+    -c|--command)
+      read -r -e -p "Enter the launch command (e.g. nvim, code): " editor_cmd
+      [[ -z "$editor_cmd" ]] && { echo "Canceled." >&2; return; }
+      echo "$editor_cmd" > "$COMMAND_FILE"
+      echo "Set launch command to: $editor_cmd"
+      ;;
+    *) echo "Invalid option for 'set'" >&2; exit 1 ;;
+  esac
+}
+
+cmd_show() {
+  case "${1:-}" in
+    command) [[ -s "$COMMAND_FILE" ]] && echo "Current launch command: $(<"$COMMAND_FILE")" || echo "No launch command set." ;;
+    *) echo "Unknown 'show' option. Try: dev show command" ;;
+  esac
+}
+
+cmd_version() {
+  echo "dev version: $VERSION"
+}
+
+cmd_triggers() {
+  ${EDITOR:-nvim} "$TRIGGERS_FILE"
+}
+
+cmd_directories() {
+  ${EDITOR:-nvim} "$DIRS_FILE"
+}
+
+cmd_uninstall() {
+  echo "Uninstalling dev CLI..."
+  rm -f "$HOME/.local/bin/dev-cli"
+  rm -rf "$CONFIG_DIR"
+  for rc_file in "$HOME/.zshrc" "$HOME/.bashrc" "$HOME/.profile"; do
+    [[ -f "$rc_file" ]] && sed -i.bak '/function dev()/,/^}/d' "$rc_file"
+  done
+  echo "✅ Uninstall complete."
+}
+
+cmd_doctor() {
+  echo "🔍 Running dev doctor..."
+  [[ -f "$VERSION_FILE" ]] && echo "✔ Version file: $(<"$VERSION_FILE")" || echo "❌ No version file"
+  [[ -s "$COMMAND_FILE" ]] && echo "✔ Launch command: $(<"$COMMAND_FILE")" || echo "❌ No launch command"
+  [[ -s "$DIRS_FILE" ]] && echo "✔ Project directories configured" || echo "❌ No directories"
+  [[ -s "$TRIGGERS_FILE" ]] && echo "✔ Triggers configured" || echo "❌ No triggers"
+  command -v fzf >/dev/null && echo "✔ fzf found" || echo "❌ fzf not found"
 }
 
 case "${1:-}" in
   -h|--help|help) cmd_help ;;
-  -v|--version|version) echo "dev version $VERSION" ;;
+  -v|--version|version) cmd_version ;;
   add) shift; cmd_add "$@" ;;
   clean) shift; cmd_clean "$@" ;;
   set) shift; cmd_set "$@" ;;
   show) shift; cmd_show "$@" ;;
-  uninstall) cmd_uninstall ;;
+  uninstall) shift || true; cmd_uninstall "$@" ;;
   triggers) cmd_triggers ;;
+  directories) cmd_directories ;;
+  doctor) cmd_doctor ;;
   *) cmd_main ;;
 esac
