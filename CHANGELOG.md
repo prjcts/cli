@@ -1,3 +1,8 @@
+## v0.1.4 - 2025-04-08
+
+- better versioning when tagging
+
+
 ## v0.1.3 - 2025-04-08
 
 - allow for readme update when tagging
